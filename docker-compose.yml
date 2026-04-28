@@ -1,21 +1,21 @@
 services:
-  avatars:
+  images:
     build: .
     env_file: .env
     restart: unless-stopped
     init: true
-    hostname: avatars.containers.local
+    hostname: images.containers.local
     labels:
-      - "hostname=avatars.containers.local"
+      - "hostname=images.containers.local"
     volumes:
       - ./data:/app/data
   redis:
     image: redis:8.6.2-alpine
     restart: unless-stopped
     init: true
-    hostname: redis.avatars.containers.local
+    hostname: redis.images.containers.local
     labels:
-      - "hostname=redis.avatars.containers.local"
+      - "hostname=redis.images.containers.local"
 
 networks:
   default:
@@ -25,4 +25,4 @@ networks:
       config:
         - subnet: 172.19.1.56/29
     driver_opts:
-      com.docker.network.bridge.name: br-avatars
+      com.docker.network.bridge.name: br-images

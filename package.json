@@ -1,5 +1,5 @@
 {
-  "name": "docker-hosts",
+  "name": "yiffy-images",
   "version": "1.0.0",
   "description": "",
   "license": "MIT",
@@ -12,7 +12,7 @@
     "lint:fix": "eslint . --fix"
   },
   "dependencies": {
-    "@yiffy/bun-router": "^1.0.1",
+    "@yiffy/bun-router": "^1.0.2",
     "file-type": "^22.0.1",
     "ioredis": "^5.10.1",
     "oceanic.js": "^1.14.0",

@@ -1,20 +1,23 @@
 import Router from "@yiffy/bun-router";
 
-import { AuthKey } from "../middleware.js";
-import { findOrCreate, updateIfChanged } from "../providers/discord.js";
+import { AuthKey } from "../../middleware.js";
+import { findOrCreate, updateIfChanged } from "../../providers/banner/discord.js";
 
 Router
-    .new("/discord/:id", "GET")
+    .new("/banner/discord/:id", "GET")
     .handle(async (req) => {
         const id = req.params.id;
         const data = await findOrCreate(id);
+        if (!data) {
+            return new Response(null, { status: 404 });
+        }
         return new Response(data.image, {
             headers: {
                 "Content-Type": data.meta.contentType,
             },
         });
     })
-    .new("/discord/update/:id", "POST")
+    .new("/banner/discord/update/:id", "POST")
     .use(AuthKey)
     .handle(async (req) => {
         const id = req.params.id;

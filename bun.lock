@@ -5,7 +5,7 @@
     "": {
       "name": "docker-hosts",
       "dependencies": {
-        "@yiffy/bun-router": "^1.0.1",
+        "@yiffy/bun-router": "^1.0.2",
         "file-type": "^22.0.1",
         "ioredis": "^5.10.1",
         "oceanic.js": "^1.14.0",
@@ -156,7 +156,7 @@
 
     "@uwu-codes/eslint-config": ["@uwu-codes/eslint-config@2.0.8", "", { "peerDependencies": { "@eslint/js": "^9.39.4", "@stylistic/eslint-plugin": "^5.10.0", "eslint": "^9.39.4", "eslint-plugin-import": "^2.32.0", "eslint-plugin-unicorn": "^59.0.1", "eslint-plugin-unused-imports": "^4.4.1", "globals": "^16.5.0", "typescript-eslint": "^8.57.1" } }, "sha512-+617W5I2YThEjJZ3dnn4cwo+B+zCsB9JYDPiVy6QsaPYcarVMeBTMTnTv+aBFVMS6h5HobDi/07JS3yBvVBvjg=="],
 
-    "@yiffy/bun-router": ["@yiffy/bun-router@1.0.1", "", { "optionalDependencies": { "persistent-debug": "^1.0.1" } }, "sha512-O2+pSuVQu/vtZocEryySfMd57CiJYTA8GhZcVTJ8a/HjkcvcIteophUB+8l6ASt/aPOqlCOn2f4mWfqMzlYrGw=="],
+    "@yiffy/bun-router": ["@yiffy/bun-router@1.0.2", "", { "optionalDependencies": { "persistent-debug": "^1.0.1" } }, "sha512-OEADfwCNeLabA3HMWp2bc0tLql6LyQYK1v1mzoi3/rSlY69Cw9qg7Ol8FKCzgl2SsS5jBsNucTZjPfd2fhEkFQ=="],
 
     "acorn": ["acorn@8.15.0", "", { "bin": "bin/acorn" }, "sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg=="],
 

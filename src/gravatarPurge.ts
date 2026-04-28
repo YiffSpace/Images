@@ -1,7 +1,7 @@
 import Debug from "persistent-debug";
 
 import { GRAVATAR_PURGE_BATCH_SIZE, GRAVATAR_PURGE_DELAY_MS, GRAVATAR_PURGE_POLL_INTERVAL_MS, REDIS_BASE } from "./Config.js";
-import { remove } from "./providers/gravatar.js";
+import { remove } from "./providers/avatar/gravatar.js";
 import { redis } from "./redis.js";
 
 const QUEUE_KEY = `${REDIS_BASE}queues:gravatar:purge`;

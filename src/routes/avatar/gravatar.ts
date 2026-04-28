@@ -1,9 +1,9 @@
 import Router from "@yiffy/bun-router";
 
-import { findOrCreate, findOrCreateByEmail } from "../providers/gravatar.js";
+import { findOrCreate, findOrCreateByEmail } from "../../providers/avatar/gravatar.js";
 
 Router
-    .new("/gravatar/:hash", "GET")
+    .new("/avatar/gravatar/:hash", "GET")
     .handle(async (req) => {
         const hash = req.params.hash;
         const data = await findOrCreate(hash);
@@ -13,7 +13,7 @@ Router
             },
         });
     })
-    .new("/gravatar/email/:email", "GET")
+    .new("/avatar/gravatar/email/:email", "GET")
     .handle(async (req) => {
         const email = req.params.email;
         const data = await findOrCreateByEmail(email);

@@ -2,10 +2,10 @@ import { createHash } from "node:crypto";
 
 import { fileTypeFromBuffer } from "file-type";
 
-import { scheduleGravatarPurge } from "../gravatarPurge.js";
-import { blobs, meta } from "../storage.js";
+import { scheduleGravatarPurge } from "../../gravatarPurge.js";
+import { blobs, meta } from "../../storage.js";
 
-import type { ImageMeta } from "../types.js";
+import type { ImageMeta } from "../../types.js";
 
 export interface GravatarImageMeta extends ImageMeta {
     email: string | null;

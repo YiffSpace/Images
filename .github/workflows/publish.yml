@@ -13,8 +13,8 @@ jobs:
         uses: ./.github/workflows/lint.yml
     build:
         runs-on: ubuntu-latest
-        if: github.repository_owner == 'donovandmc'
-        needs: [lint]
+        if: github.repository_owner == 'yiffspace'
+        needs: [ lint ]
         steps:
             - uses: actions/checkout@v6
             - uses: docker/setup-buildx-action@v4
