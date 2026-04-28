@@ -1,10 +1,13 @@
 import Router, { Middleware } from "@yiffy/bun-router";
+import debug from "debug";
 import Debug from "persistent-debug";
 
 Router
-    .useAll(Middleware.DebugLog)
+    .useAll(Middleware.DebugLog("request:"))
     .useAll(Middleware.Timing)
     .useAll(Middleware.RequestId);
+
+debug.enable("server:*");
 
 await Router.load(new URL("./routes", import.meta.url));
 
