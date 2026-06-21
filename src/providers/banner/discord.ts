@@ -1,6 +1,6 @@
 import { fileTypeFromBuffer } from "file-type";
-import Debug from "persistent-debug";
 
+import Log from "../../log.js";
 import { blobs, meta } from "../../storage.js";
 import { buildMeta, client, type DiscordImageMeta } from "../discord.js";
 
@@ -19,7 +19,7 @@ function url(id: string, hash: string, type = TYPE, size = SIZE): string {
 }
 
 async function download(id: string, hash: string, type = TYPE, size = SIZE): Promise<Data> {
-    Debug(`images:banner:discord:download`, `Downloading banner for ${id} with hash "${hash}"`);
+    Log(`images:banner:discord:download`, `Downloading banner for ${id} with hash "${hash}"`);
     const imageUrl = url(id, hash, type, size);
     const response = await Bun.fetch(imageUrl);
     if (!response.ok) {
@@ -32,7 +32,7 @@ async function download(id: string, hash: string, type = TYPE, size = SIZE): Pro
 }
 
 async function store(id: string, data: Data): Promise<void> {
-    Debug(`images:banner:discord:store`, `Storing banner for ${id} with hash "${data.meta.hash ?? ""}"`);
+    Log(`images:banner:discord:store`, `Storing banner for ${id} with hash "${data.meta.hash ?? ""}"`);
     await meta.set(userMetaKey(id), data.meta);
     if (!data.meta.shared) {
         await blobs.setItemRaw(userBlobKey(id), data.image);
@@ -40,7 +40,7 @@ async function store(id: string, data: Data): Promise<void> {
 }
 
 async function remove(id: string): Promise<void> {
-    Debug(`images:banner:discord:remove`, `Removing banner for ${id}`);
+    Log(`images:banner:discord:remove`, `Removing banner for ${id}`);
     const metaData = await meta.get<DiscordImageMeta>(userMetaKey(id));
     await meta.removeItem(userMetaKey(id));
     if (metaData && !metaData.shared) {
@@ -48,13 +48,13 @@ async function remove(id: string): Promise<void> {
     } else {
         const exists = await blobs.hasItem(userBlobKey(id));
         if (exists) {
-            Debug(`images:banner:discord:remove`, `Blob for ${id} exists but meta is missing, skipping removal`);
+            Log(`images:banner:discord:remove`, `Blob for ${id} exists but meta is missing, skipping removal`);
         }
     }
 }
 
 async function get(id: string): Promise<Data | null> {
-    Debug(`images:banner:discord:get`, `Getting banner for ${id}`);
+    Log(`images:banner:discord:get`, `Getting banner for ${id}`);
     const metaData = await meta.get<DiscordImageMeta>(userMetaKey(id));
     if (!metaData) {
         return null;
@@ -67,27 +67,27 @@ async function get(id: string): Promise<Data | null> {
 }
 
 async function getCurrentHash(id: string): Promise<string | null> {
-    Debug(`images:banner:discord:getCurrentHash`, `Getting current hash for ${id} from Discord API`);
+    Log(`images:banner:discord:getCurrentHash`, `Getting current hash for ${id} from Discord API`);
     const user = await client.rest.users.get(id);
-    Debug(`images:banner:discord:getCurrentHash`, `Current hash for ${id} is "${user.banner ?? ""}"`);
+    Log(`images:banner:discord:getCurrentHash`, `Current hash for ${id} is "${user.banner ?? ""}"`);
     return user.banner as string | null;
 }
 
 export async function updateIfChanged(id: string, hash: string): Promise<boolean> {
-    Debug(`images:banner:discord:updateIfChanged`, `Checking for updates for ${id} with hash "${hash}"`);
+    Log(`images:banner:discord:updateIfChanged`, `Checking for updates for ${id} with hash "${hash}"`);
     const existing = await get(id);
     if (existing) {
         if (existing.meta.hash !== hash) {
-            Debug(`images:banner:discord:updateIfChanged`, `Hash for ${id} changed: "${existing.meta.hash ?? ""}" -> "${hash}"`);
+            Log(`images:banner:discord:updateIfChanged`, `Hash for ${id} changed: "${existing.meta.hash ?? ""}" -> "${hash}"`);
             const data = await download(id, hash);
             await remove(id);
             await store(id, data);
             return true;
         }
-        Debug(`images:banner:discord:updateIfChanged`, `Hash for ${id} unchanged, update ignored`);
+        Log(`images:banner:discord:updateIfChanged`, `Hash for ${id} unchanged, update ignored`);
         return false;
     }
-    Debug(`images:banner:discord:updateIfChanged`, `No existing banner for ${id}, downloading new banner with hash "${hash}"`);
+    Log(`images:banner:discord:updateIfChanged`, `No existing banner for ${id}, downloading new banner with hash "${hash}"`);
     const data = await download(id, hash);
     await store(id, data);
     return true;
@@ -96,14 +96,14 @@ export async function updateIfChanged(id: string, hash: string): Promise<boolean
 const inFlight = new Map<string, Promise<Data | null>>();
 
 async function _findOrCreate(id: string, hash?: string): Promise<Data | null> {
-    Debug(`images:banner:discord:findOrCreate`, `Finding or creating banner for ${id} with hash "${hash ?? ""}"`);
+    Log(`images:banner:discord:findOrCreate`, `Finding or creating banner for ${id} with hash "${hash ?? ""}"`);
     const existing = await get(id);
     if (existing) {
-        Debug(`images:banner:discord:findOrCreate`, `Found existing banner for ${id} with hash "${existing.meta.hash}"`);
+        Log(`images:banner:discord:findOrCreate`, `Found existing banner for ${id} with hash "${existing.meta.hash}"`);
         if (hash) return (await updateIfChanged(id, hash).then(changed => changed ? get(id) : existing))!;
         return existing;
     }
-    Debug(`images:banner:discord:findOrCreate`, `No existing banner for ${id}, downloading new banner with hash "${hash ?? ""}"`);
+    Log(`images:banner:discord:findOrCreate`, `No existing banner for ${id}, downloading new banner with hash "${hash ?? ""}"`);
     const currentHash = hash ?? (await getCurrentHash(id));
     if (!currentHash) {
         return null;

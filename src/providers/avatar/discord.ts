@@ -1,6 +1,6 @@
 import { fileTypeFromBuffer } from "file-type";
-import Debug from "persistent-debug";
 
+import Log from "../../log.js";
 import { blobs, meta } from "../../storage.js";
 import { buildMeta, client, type DiscordImageMeta } from "../discord.js";
 
@@ -33,7 +33,7 @@ async function ensureDefaults(): Promise<void> {
         const blobKey = defaultBlobKey(n);
         const hasBlob = await blobs.hasItem(blobKey);
         if (!hasMeta || !hasBlob) {
-            Debug(`images:avatar:discord:defaults`, `Default avatar ${n} is missing, fetching from Discord`);
+            Log(`images:avatar:discord:defaults`, `Default avatar ${n} is missing, fetching from Discord`);
             const imageUrl = defaultUrl(n);
             const response = await Bun.fetch(imageUrl);
             if (!response.ok) {
@@ -49,7 +49,7 @@ async function ensureDefaults(): Promise<void> {
 }
 
 async function downloadDefault(id: string): Promise<Data> {
-    Debug(`images:avatar:discord:downloadDefault`, `Downloading default avatar for ${id}`);
+    Log(`images:avatar:discord:downloadDefault`, `Downloading default avatar for ${id}`);
     const n = Number((BigInt(id) >> 22n) % 6n);
     const imageUrl = defaultUrl(n);
     const metaData = await meta.get<DiscordImageMeta>(defaultMetaKey(n));
@@ -65,7 +65,7 @@ async function downloadDefault(id: string): Promise<Data> {
 
 async function download(id: string, hash: string | null, type = TYPE, size = SIZE): Promise<Data> {
     if (!hash) return downloadDefault(id);
-    Debug(`images:avatar:discord:download`, `Downloading avatar for ${id} with hash "${hash}"`);
+    Log(`images:avatar:discord:download`, `Downloading avatar for ${id} with hash "${hash}"`);
     const imageUrl = url(id, hash, type, size);
     const response = await Bun.fetch(imageUrl);
     if (!response.ok) {
@@ -78,7 +78,7 @@ async function download(id: string, hash: string | null, type = TYPE, size = SIZ
 }
 
 async function store(id: string, data: Data): Promise<void> {
-    Debug(`images:avatar:discord:store`, `Storing avatar for ${id} with hash "${data.meta.hash ?? ""}"`);
+    Log(`images:avatar:discord:store`, `Storing avatar for ${id} with hash "${data.meta.hash ?? ""}"`);
     await meta.set(userMetaKey(id), data.meta);
     if (!data.meta.shared) {
         await blobs.setItemRaw(userBlobKey(id), data.image);
@@ -86,7 +86,7 @@ async function store(id: string, data: Data): Promise<void> {
 }
 
 async function remove(id: string): Promise<void> {
-    Debug(`images:avatar:discord:remove`, `Removing avatar for ${id}`);
+    Log(`images:avatar:discord:remove`, `Removing avatar for ${id}`);
     const metaData = await meta.get<DiscordImageMeta>(userMetaKey(id));
     await meta.removeItem(userMetaKey(id));
     if (metaData && !metaData.shared) {
@@ -94,13 +94,13 @@ async function remove(id: string): Promise<void> {
     } else {
         const exists = await blobs.hasItem(userBlobKey(id));
         if (exists) {
-            Debug(`images:avatar:discord:remove`, `Blob for ${id} exists but meta is missing, skipping removal`);
+            Log(`images:avatar:discord:remove`, `Blob for ${id} exists but meta is missing, skipping removal`);
         }
     }
 }
 
 async function get(id: string): Promise<Data | null> {
-    Debug(`images:avatar:discord:get`, `Getting avatar for ${id}`);
+    Log(`images:avatar:discord:get`, `Getting avatar for ${id}`);
     const metaData = await meta.get<DiscordImageMeta>(userMetaKey(id));
     if (!metaData) {
         return null;
@@ -113,27 +113,27 @@ async function get(id: string): Promise<Data | null> {
 }
 
 async function getCurrentHash(id: string): Promise<string | null> {
-    Debug(`images:avatar:discord:getCurrentHash`, `Getting current hash for ${id} from Discord API`);
+    Log(`images:avatar:discord:getCurrentHash`, `Getting current hash for ${id} from Discord API`);
     const user = await client.rest.users.get(id);
-    Debug(`images:avatar:discord:getCurrentHash`, `Current hash for ${id} is "${user.avatar ?? ""}"`);
+    Log(`images:avatar:discord:getCurrentHash`, `Current hash for ${id} is "${user.avatar ?? ""}"`);
     return user.avatar;
 }
 
 export async function updateIfChanged(id: string, hash: string): Promise<boolean> {
-    Debug(`images:avatar:discord:updateIfChanged`, `Checking for updates for ${id} with hash "${hash}"`);
+    Log(`images:avatar:discord:updateIfChanged`, `Checking for updates for ${id} with hash "${hash}"`);
     const existing = await get(id);
     if (existing) {
         if (existing.meta.hash !== hash) {
-            Debug(`images:avatar:discord:updateIfChanged`, `Hash for ${id} changed: "${existing.meta.hash ?? ""}" -> "${hash}"`);
+            Log(`images:avatar:discord:updateIfChanged`, `Hash for ${id} changed: "${existing.meta.hash ?? ""}" -> "${hash}"`);
             const data = await download(id, hash);
             await remove(id);
             await store(id, data);
             return true;
         }
-        Debug(`images:avatar:discord:updateIfChanged`, `Hash for ${id} unchanged, update ignored`);
+        Log(`images:avatar:discord:updateIfChanged`, `Hash for ${id} unchanged, update ignored`);
         return false;
     }
-    Debug(`images:avatar:discord:updateIfChanged`, `No existing avatar for ${id}, downloading new avatar with hash "${hash}"`);
+    Log(`images:avatar:discord:updateIfChanged`, `No existing avatar for ${id}, downloading new avatar with hash "${hash}"`);
     const data = await download(id, hash);
     await store(id, data);
     return true;
@@ -142,14 +142,14 @@ export async function updateIfChanged(id: string, hash: string): Promise<boolean
 const inFlight = new Map<string, Promise<Data>>();
 
 async function _findOrCreate(id: string, hash?: string): Promise<Data> {
-    Debug(`images:avatar:discord:findOrCreate`, `Finding or creating avatar for ${id} with hash "${hash ?? ""}"`);
+    Log(`images:avatar:discord:findOrCreate`, `Finding or creating avatar for ${id} with hash "${hash ?? ""}"`);
     const existing = await get(id);
     if (existing) {
-        Debug(`images:avatar:discord:findOrCreate`, `Found existing avatar for ${id} with hash "${existing.meta.hash}"`);
+        Log(`images:avatar:discord:findOrCreate`, `Found existing avatar for ${id} with hash "${existing.meta.hash}"`);
         if (hash) return (await updateIfChanged(id, hash).then(changed => changed ? get(id) : existing))!;
         return existing;
     }
-    Debug(`images:avatar:discord:findOrCreate`, `No existing avatar for ${id}, downloading new avatar with hash "${hash ?? ""}"`);
+    Log(`images:avatar:discord:findOrCreate`, `No existing avatar for ${id}, downloading new avatar with hash "${hash ?? ""}"`);
     const currentHash = hash ?? (await getCurrentHash(id));
     const data = await download(id, currentHash);
     await store(id, data);
