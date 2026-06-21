@@ -7,7 +7,7 @@ Router
     .useAll(Middleware.Timing)
     .useAll(Middleware.RequestId);
 
-debug.enable("server:*");
+debug.enable("request:*");
 
 await Router.load(new URL("./routes", import.meta.url));
 

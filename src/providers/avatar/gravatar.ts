@@ -60,7 +60,7 @@ export async function findOrCreate(hash: string, email?: string): Promise<Data> 
     const imageUrl = url(hash);
     const response = await Bun.fetch(imageUrl);
     if (!response.ok) {
-        throw new Error(`Failed to fetch Gravatar image: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch Gravatar image "${imageUrl}": ${response.status} ${response.statusText}`);
     }
     const image = await response.arrayBuffer();
     const fileType = await fileTypeFromBuffer(new Uint8Array(image));

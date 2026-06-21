@@ -45,7 +45,7 @@ async function download(id: string, hash: string, type = TYPE, size = SIZE): Pro
     const imageUrl = url(id, hash, type, size);
     const response = await Bun.fetch(imageUrl);
     if (!response.ok) {
-        throw new Error(`Failed to fetch banner: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch banner "${imageUrl}": ${response.status} ${response.statusText}`);
     }
     const image = await response.arrayBuffer();
     const fileType = await fileTypeFromBuffer(new Uint8Array(image));

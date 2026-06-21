@@ -46,7 +46,7 @@ async function ensureDefaults(): Promise<void> {
             const url = defaultUrl(n);
             const response = await Bun.fetch(url);
             if (!response.ok) {
-                throw new Error(`Failed to fetch default avatar: ${response.status} ${response.statusText}`);
+                throw new Error(`Failed to fetch default avatar "${url}": ${response.status} ${response.statusText}`);
             }
             const image = await response.arrayBuffer();
             const fileType = await fileTypeFromBuffer(new Uint8Array(image));
@@ -92,7 +92,7 @@ async function download(id: string, hash: string | null, type = TYPE, size = SIZ
     const imageUrl = url(id, hash, type, size);
     const response = await Bun.fetch(imageUrl);
     if (!response.ok) {
-        throw new Error(`Failed to fetch avatar: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch avatar "${imageUrl}": ${response.status} ${response.statusText}`);
     }
     const image = await response.arrayBuffer();
     const fileType = await fileTypeFromBuffer(new Uint8Array(image));
