@@ -1,15 +1,8 @@
 import { fileTypeFromBuffer } from "file-type";
-import { Client } from "oceanic.js";
 import Debug from "persistent-debug";
 
-import { BOT_TOKEN } from "../../Config.js";
 import { blobs, meta } from "../../storage.js";
-
-import type { ImageMeta } from "../../types.js";
-
-export interface DiscordImageMeta extends ImageMeta {
-    hash: string | null;
-}
+import { buildMeta, client, type DiscordImageMeta } from "../discord.js";
 
 interface Data {
     image: Buffer;
@@ -23,8 +16,6 @@ const userMetaKey = (id: string): string => `discord/avatar/${id}`;
 const userBlobKey = (id: string): string => `discord/avatar/${(BigInt(id) % 100n).toString().padStart(2, "0")}/${id}.webp`;
 const defaultMetaKey = (n: number): string => `discord/avatar/default/${n}`;
 const defaultBlobKey = (n: number): string => `discord/avatar/default/${n}.png`;
-const client = new Client({ auth: `Bot ${BOT_TOKEN}`, disableCache: "no-warning" });
-await client.restMode();
 await ensureDefaults();
 
 function url(id: string, hash: string, type = TYPE, size = SIZE): string {
@@ -43,37 +34,23 @@ async function ensureDefaults(): Promise<void> {
         const hasBlob = await blobs.hasItem(blobKey);
         if (!hasMeta || !hasBlob) {
             Debug(`images:avatar:discord:defaults`, `Default avatar ${n} is missing, fetching from Discord`);
-            const url = defaultUrl(n);
-            const response = await Bun.fetch(url);
+            const imageUrl = defaultUrl(n);
+            const response = await Bun.fetch(imageUrl);
             if (!response.ok) {
-                throw new Error(`Failed to fetch default avatar "${url}": ${response.status} ${response.statusText}`);
+                throw new Error(`Failed to fetch default avatar "${imageUrl}": ${response.status} ${response.statusText}`);
             }
             const image = await response.arrayBuffer();
             const fileType = await fileTypeFromBuffer(new Uint8Array(image));
-            const metaData = buildMeta(blobKey, null, fileType?.mime ?? "application/octet-stream", image.byteLength, url, true);
+            const metaData = buildMeta(blobKey, null, fileType?.mime ?? "application/octet-stream", image.byteLength, imageUrl, true);
             await meta.set(metaKey, metaData);
             await blobs.setItemRaw(blobKey, Buffer.from(image));
         }
     }
 }
 
-function buildMeta(blobKey: string, hash: string | null, contentType: string, size: number, url: string, shared: boolean): DiscordImageMeta {
-    return {
-        backend: "fs",
-        blobKey,
-        contentType,
-        createdAt: new Date().toISOString(),
-        hash,
-        shared,
-        size,
-        url,
-    };
-}
-
 async function downloadDefault(id: string): Promise<Data> {
     Debug(`images:avatar:discord:downloadDefault`, `Downloading default avatar for ${id}`);
-    await ensureDefaults();
-    const n = Number((BigInt(id) << 22n) % 6n);
+    const n = Number((BigInt(id) >> 22n) % 6n);
     const imageUrl = defaultUrl(n);
     const metaData = await meta.get<DiscordImageMeta>(defaultMetaKey(n));
     if (!metaData) {
@@ -162,7 +139,9 @@ export async function updateIfChanged(id: string, hash: string): Promise<boolean
     return true;
 }
 
-export async function findOrCreate(id: string, hash?: string): Promise<Data> {
+const inFlight = new Map<string, Promise<Data>>();
+
+async function _findOrCreate(id: string, hash?: string): Promise<Data> {
     Debug(`images:avatar:discord:findOrCreate`, `Finding or creating avatar for ${id} with hash "${hash ?? ""}"`);
     const existing = await get(id);
     if (existing) {
@@ -175,4 +154,13 @@ export async function findOrCreate(id: string, hash?: string): Promise<Data> {
     const data = await download(id, currentHash);
     await store(id, data);
     return data;
+}
+
+export function findOrCreate(id: string, hash?: string): Promise<Data> {
+    let promise = inFlight.get(id);
+    if (!promise) {
+        promise = _findOrCreate(id, hash).finally(() => inFlight.delete(id));
+        inFlight.set(id, promise);
+    }
+    return promise;
 }

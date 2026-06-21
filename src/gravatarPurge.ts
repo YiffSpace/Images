@@ -20,13 +20,16 @@ async function runDuePurges(): Promise<void> {
     running = true;
     try {
         const now = Date.now().toString();
-        const hashes = await redis.zrangebyscore(QUEUE_KEY, "0", now, "LIMIT", 0, GRAVATAR_PURGE_BATCH_SIZE);
-        for (const hash of hashes) {
-            const claimed = await redis.zrem(QUEUE_KEY, hash);
-            if (claimed === 0) continue;
-            await remove(hash);
-            Debug("avatars:gravatar:purge", `Purged ${hash}`);
-        }
+        let hashes: Array<string>;
+        do {
+            hashes = await redis.zrangebyscore(QUEUE_KEY, "0", now, "LIMIT", 0, GRAVATAR_PURGE_BATCH_SIZE);
+            for (const hash of hashes) {
+                const claimed = await redis.zrem(QUEUE_KEY, hash);
+                if (claimed === 0) continue;
+                await remove(hash);
+                Debug("avatars:gravatar:purge", `Purged ${hash}`);
+            }
+        } while (hashes.length === GRAVATAR_PURGE_BATCH_SIZE);
     } catch (error) {
         Debug("avatars:gravatar:purge", "Purge worker failed: %O", error);
     } finally {

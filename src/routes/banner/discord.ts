@@ -21,7 +21,15 @@ Router
     .use(AuthKey)
     .handle(async (req) => {
         const id = req.params.id;
-        const hash = (await req.body!.json() as { hash: string }).hash;
-        const updated = await updateIfChanged(id, hash);
+        let body: { hash?: unknown } | null = null;
+        try {
+            body = req.body ? await req.body.json() as { hash?: unknown } : null;
+        } catch {
+            // invalid JSON
+        }
+        if (typeof body?.hash !== "string") {
+            return Response.json({ message: "Bad Request" }, { status: 400 });
+        }
+        const updated = await updateIfChanged(id, body.hash);
         return Response.json({ updated });
     });

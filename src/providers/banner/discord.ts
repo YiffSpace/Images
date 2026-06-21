@@ -1,15 +1,8 @@
 import { fileTypeFromBuffer } from "file-type";
-import { Client } from "oceanic.js";
 import Debug from "persistent-debug";
 
-import { BOT_TOKEN } from "../../Config.js";
 import { blobs, meta } from "../../storage.js";
-
-import type { ImageMeta } from "../../types.js";
-
-export interface DiscordImageMeta extends ImageMeta {
-    hash: string | null;
-}
+import { buildMeta, client, type DiscordImageMeta } from "../discord.js";
 
 interface Data {
     image: Buffer;
@@ -20,24 +13,9 @@ const TYPE = "webp";
 const SIZE = 128;
 const userMetaKey = (id: string): string => `discord/banner/${id}`;
 const userBlobKey = (id: string): string => `discord/banner/${(BigInt(id) % 100n).toString().padStart(2, "0")}/${id}.webp`;
-const client = new Client({ auth: `Bot ${BOT_TOKEN}`, disableCache: "no-warning" });
-await client.restMode();
 
 function url(id: string, hash: string, type = TYPE, size = SIZE): string {
     return `https://cdn.discordapp.com/banners/${id}/${hash}.${type}?size=${size}`;
-}
-
-function buildMeta(blobKey: string, hash: string | null, contentType: string, size: number, url: string, shared: boolean): DiscordImageMeta {
-    return {
-        backend: "fs",
-        blobKey,
-        contentType,
-        createdAt: new Date().toISOString(),
-        hash,
-        shared,
-        size,
-        url,
-    };
 }
 
 async function download(id: string, hash: string, type = TYPE, size = SIZE): Promise<Data> {
@@ -115,7 +93,9 @@ export async function updateIfChanged(id: string, hash: string): Promise<boolean
     return true;
 }
 
-export async function findOrCreate(id: string, hash?: string): Promise<Data | null> {
+const inFlight = new Map<string, Promise<Data | null>>();
+
+async function _findOrCreate(id: string, hash?: string): Promise<Data | null> {
     Debug(`images:banner:discord:findOrCreate`, `Finding or creating banner for ${id} with hash "${hash ?? ""}"`);
     const existing = await get(id);
     if (existing) {
@@ -126,10 +106,18 @@ export async function findOrCreate(id: string, hash?: string): Promise<Data | nu
     Debug(`images:banner:discord:findOrCreate`, `No existing banner for ${id}, downloading new banner with hash "${hash ?? ""}"`);
     const currentHash = hash ?? (await getCurrentHash(id));
     if (!currentHash) {
-        await remove(id);
         return null;
     }
     const data = await download(id, currentHash);
     await store(id, data);
     return data;
+}
+
+export function findOrCreate(id: string, hash?: string): Promise<Data | null> {
+    let promise = inFlight.get(id);
+    if (!promise) {
+        promise = _findOrCreate(id, hash).finally(() => inFlight.delete(id));
+        inFlight.set(id, promise);
+    }
+    return promise;
 }
